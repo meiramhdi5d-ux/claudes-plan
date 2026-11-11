@@ -1,0 +1,513 @@
+
+    <!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои Цели</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        body {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            padding: 20px 15px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #111827;
+        }
+        .card {
+            background: #ffffff;
+            padding: 18px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        input[type="text"], input[type="datetime-local"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            background: #f9fafb;
+        }
+        input:focus {
+            border-color: #4f46e5;
+            background: #ffffff;
+        }
+        label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: -6px;
+            margin-left: 4px;
+        }
+        button.add-btn {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button.add-btn:active {
+            background-color: #4338ca;
+        }
+        .goal-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .goal-item {
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: opacity 0.2s;
+        }
+        .goal-item.done {
+            opacity: 0.6;
+            background: #f9fafb;
+        }
+        .goal-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            flex: 1;
+        }
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            margin-top: 2px;
+            accent-color: #10b981;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .goal-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .goal-text {
+            font-size: 16px;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .goal-item.done .goal-text {
+            text-decoration: line-through;
+            color: #6b7280;
+        }
+        .goal-time {
+            font-size: 13px;
+            color: #4f46e5;
+            font-weight: 500;
+        }
+        .goal-time.overdue {
+            color: #ef4444;
+        }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .delete-btn:hover {
+            color: #ef4444;
+        }
+        .empty-msg {
+            text-align: center;
+            color: #9ca3af;
+            margin-top: 30px;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎯 Мои цели</h1>
+
+    <div class="card">
+        <div class="input-group">
+            <input type="text" id="goalInput" placeholder="Напишите вашу цель...">
+            <label for="deadlineInput">Выполнить до (дата и время):</label>
+            <input type="datetime-local" id="deadlineInput">
+            <button class="add-btn" onclick="addGoal()">Добавить цель</button>
+        </div>
+    </div>
+
+    <div id="goalList" class="goal-list"></div>
+    <div id="emptyMsg" class="empty-msg">Пока нет целей. Добавьте первую!</div>
+</div>
+
+<script>
+    let goals = JSON.parse(localStorage.getItem('myGoals')) || [];
+
+    function saveGoals() {
+        localStorage.setItem('myGoals', JSON.stringify(goals));
+        renderGoals();
+    }
+
+    function addGoal() {
+        const textInput = document.getElementById('goalInput');
+        const timeInput = document.getElementById('deadlineInput');
+        const text = textInput.value.trim();
+        const deadline = timeInput.value;
+
+        if (!text) {
+            alert('Пожалуйста, напишите текст цели!');
+            return;
+        }
+
+        goals.unshift({
+            id: Date.now(),
+            text: text,
+            deadline: deadline,
+            done: false
+        });
+
+        textInput.value = '';
+        timeInput.value = '';
+        saveGoals();
+    }
+
+    function toggleGoal(id) {
+        goals = goals.map(g => g.id === id ? { ...g, done: !g.done } : g);
+        saveGoals();
+    }
+
+    function deleteGoal(id) {
+        goals = goals.filter(g => g.id !== id);
+        saveGoals();
+    }
+
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function renderGoals() {
+        const list = document.getElementById('goalList');
+        const emptyMsg = document.getElementById('emptyMsg');
+        list.innerHTML = '';
+
+        if (goals.length === 0) {
+            emptyMsg.style.display = 'block';
+            return;
+        } else {
+            emptyMsg.style.display = 'none';
+        }
+
+        const now = new Date();
+
+        goals.forEach(goal => {
+            const isOverdue = goal.deadline && !goal.done && new Date(goal.deadline) < now;
+            const item = document.createElement('div');
+            item.className = 'goal-item' + (goal.done ? ' done' : '');
+
+            item.innerHTML = `
+                <div class="goal-left">
+                    <input type="checkbox" ${goal.done ? 'checked' : ''} onchange="toggleGoal(${goal.id})">
+                    <div class="goal-info">
+                        <span class="goal-text">${goal.text}</span>
+                        ${goal.deadline ? `<span class="goal-time ${isOverdue ? 'overdue' : ''}">⏰ До: ${formatDateTime(goal.deadline)} ${isOverdue ? '(просрочено)' : ''}</span>` : ''}
+                    </div>
+                </div>
+                <button class="delete-btn" onclick="deleteGoal(${goal.id})">✕</button>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    renderGoals();
+</script>
+
+</body>
+</html>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        body {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            padding: 20px 15px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #111827;
+        }
+        .card {
+            background: #ffffff;
+            padding: 18px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        input[type="text"], input[type="datetime-local"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            background: #f9fafb;
+        }
+        input:focus {
+            border-color: #4f46e5;
+            background: #ffffff;
+        }
+        label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: -6px;
+            margin-left: 4px;
+        }
+        button.add-btn {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button.add-btn:active {
+            background-color: #4338ca;
+        }
+        .goal-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .goal-item {
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: opacity 0.2s;
+        }
+        .goal-item.done {
+            opacity: 0.6;
+            background: #f9fafb;
+        }
+        .goal-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            flex: 1;
+        }
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            margin-top: 2px;
+            accent-color: #10b981;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .goal-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .goal-text {
+            font-size: 16px;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .goal-item.done .goal-text {
+            text-decoration: line-through;
+            color: #6b7280;
+        }
+        .goal-time {
+            font-size: 13px;
+            color: #4f46e5;
+            font-weight: 500;
+        }
+        .goal-time.overdue {
+            color: #ef4444;
+        }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .delete-btn:hover {
+            color: #ef4444;
+        }
+        .empty-msg {
+            text-align: center;
+            color: #9ca3af;
+            margin-top: 30px;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎯 Мои цели</h1>
+
+    <div class="card">
+        <div class="input-group">
+            <input type="text" id="goalInput" placeholder="Напишите вашу цель...">
+            <label for="deadlineInput">Выполнить до (дата и время):</label>
+            <input type="datetime-local" id="deadlineInput">
+            <button class="add-btn" onclick="addGoal()">Добавить цель</button>
+        </div>
+    </div>
+
+    <div id="goalList" class="goal-list"></div>
+    <div id="emptyMsg" class="empty-msg">Пока нет целей. Добавьте первую!</div>
+</div>
+
+<script>
+    let goals = JSON.parse(localStorage.getItem('myGoals')) || [];
+
+    function saveGoals() {
+        localStorage.setItem('myGoals', JSON.stringify(goals));
+        renderGoals();
+    }
+
+    function addGoal() {
+        const textInput = document.getElementById('goalInput');
+        const timeInput = document.getElementById('deadlineInput');
+        const text = textInput.value.trim();
+        const deadline = timeInput.value;
+
+        if (!text) {
+            alert('Пожалуйста, напишите текст цели!');
+            return;
+        }
+
+        goals.unshift({
+            id: Date.now(),
+            text: text,
+            deadline: deadline,
+            done: false
+        });
+
+        textInput.value = '';
+        timeInput.value = '';
+        saveGoals();
+    }
+
+    function toggleGoal(id) {
+        goals = goals.map(g => g.id === id ? { ...g, done: !g.done } : g);
+        saveGoals();
+    }
+
+    function deleteGoal(id) {
+        goals = goals.filter(g => g.id !== id);
+        saveGoals();
+    }
+
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function renderGoals() {
+        const list = document.getElementById('goalList');
+        const emptyMsg = document.getElementById('emptyMsg');
+        list.innerHTML = '';
+
+        if (goals.length === 0) {
+            emptyMsg.style.display = 'block';
+            return;
+        } else {
+            emptyMsg.style.display = 'none';
+        }
+
+        const now = new Date();
+
+        goals.forEach(goal => {
+            const isOverdue = goal.deadline && !goal.done && new Date(goal.deadline) < now;
+            const item = document.createElement('div');
+            item.className = 'goal-item' + (goal.done ? ' done' : '');
+
+            item.innerHTML = `
+                <div class="goal-left">
+                    <input type="checkbox" ${goal.done ? 'checked' : ''} onchange="toggleGoal(${goal.id})">
+                    <div class="goal-info">
+                        <span class="goal-text">${goal.text}</span>
+                        ${goal.deadline ? `<span class="goal-time ${isOverdue ? 'overdue' : ''}">⏰ До: ${formatDateTime(goal.deadline)} ${isOverdue ? '(просрочено)' : ''}</span>` : ''}
+                    </div>
+                </div>
+                <button class="delete-btn" onclick="deleteGoal(${goal.id})">✕</button>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    renderGoals();
+</script>
+
+</body>
+</html>
